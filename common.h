@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
+#include <stdbool.h>
 
 typedef enum err_code{
     err_ok = 0 , err_null , 

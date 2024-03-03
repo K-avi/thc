@@ -45,7 +45,7 @@ err_code task_queue_push_back(S_TASKQUEUE * queue , S_TASK * task){
     return err_ok;
 }//not tested
 
-err_code task_queue_pop_back(S_TASKQUEUE * queue , S_TASK * task){
+err_code task_queue_pop_front(S_TASKQUEUE * queue , S_TASK * task){
     def_err_handler(!queue, "thqueue_pop", err_null)
     def_err_handler(!task, "thqueue_pop", err_null)
 
@@ -55,8 +55,9 @@ err_code task_queue_pop_back(S_TASKQUEUE * queue , S_TASK * task){
         return err_ok ;
     }
 
-    *task = queue->tasks[get_back_queue(queue)];
+    *task = queue->tasks[queue->start];
     queue->size--;
+    queue->start = (queue->start + 1) % queue->max;
 
     return err_ok;
 }//not tested
@@ -67,4 +68,8 @@ void task_queue_destroy(S_TASKQUEUE * queue){
             free(queue->tasks);
         }
     }
+}//not tested
+
+bool task_queue_empty(S_TASKQUEUE * queue){
+    return queue->size == 0 ;
 }//not tested

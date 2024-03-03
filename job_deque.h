@@ -3,24 +3,16 @@
 
 #include "common.h"
 
-
-/*
-simple wrapper for 
-function pointer with it's 
-args to pass to 
-*/
 typedef struct s_task{
     void (* function)(void*); 
     void * args ;
 }S_TASK;
-
 /*
-simple dequeue for tasks
-implemented with a dynamic array. 
-Maybe a linked list would have 
-been better but have strong 
-opinions about linked structures.
+    simple wrapper for 
+    function pointer with it's 
+    args to pass to 
 */
+
 typedef struct s_queue{
     uint32_t max ; 
     uint32_t size ; 
@@ -29,7 +21,13 @@ typedef struct s_queue{
 
     S_TASK * tasks ; 
 }S_TASKQUEUE ; 
-
+/*
+    simple dequeue for tasks
+    implemented with a dynamic array. 
+    Maybe a linked list would have 
+    been better but have strong 
+    opinions about linked structures.
+*/
 
 extern err_code task_queue_init(S_TASKQUEUE * queue);
 /*
@@ -63,9 +61,18 @@ extern void task_queue_destroy(S_TASKQUEUE * queue);
     allocated to it. 
 */
 
+extern bool task_queue_empty(S_TASKQUEUE * queue);
+/*
+    queue -> not null & initialized ; 
+    returns true if the queue is empty
+    false otherwise
+
+    doesn't check for error ;
+    tbf it could be a macro
+*/
+
 #ifdef debug 
 extern void task_queue_print(S_TASKQUEUE * queue);
 #endif
-
 
 #endif 

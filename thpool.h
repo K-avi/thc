@@ -44,7 +44,7 @@ extern err_code thpool_append_task(S_THPOOL * pool , S_TASK * task);
     appends the task to the thpool queue
 */
 
-extern void thpool_destroy(S_THPOOL * pool );
+extern void thpool_destroy(S_THPOOL * pool, uint16_t mask );
 /*
     pool -> not null ; 
     shutdowns the pool's thread,
