@@ -17,27 +17,41 @@ static void * thread_pool_thread(void * pool){
     //def_err_handler(!pool, "thread_pool_thread", err_null)
     S_THPOOL * thpool = (S_THPOOL *)pool;
     S_TASK fn_task;
-    while(1){
+    while(! (thpool->flags & pool_shutting_down) ){
         pthread_mutex_lock(&thpool->mutex_queue);
 
         while( task_queue_empty(&thpool->task_queue)  && 
                 !(thpool->flags & pool_shutting_down)){
             pthread_cond_wait(&thpool->cond_queue, &thpool->mutex_queue);
         }
-        if(thpool->flags & pool_shutting_down){
+
+        pthread_mutex_lock(&thpool->mutex_nbworking); 
+        thpool->nb_th_working++;
+        pthread_mutex_unlock(&thpool->mutex_nbworking);
+
+        if(thpool->flags & pool_shutting_down_force){
             pthread_mutex_unlock(&thpool->mutex_queue);
             pthread_exit(NULL);
         }
+
         task_queue_pop(&thpool->task_queue, &fn_task);
-
         pthread_mutex_unlock(&thpool->mutex_queue);
-        if(fn_task.args && fn_task.function)
+        if(fn_task.args && fn_task.function ){
             fn_task.function(fn_task.args);
+        }
+        
+        pthread_mutex_lock(&thpool->mutex_nbworking); 
+        thpool->nb_th_working--;
+        if(!thpool->nb_th_working){
+            pthread_cond_signal(&thpool->cond_nbworking);
+        }
+        pthread_mutex_unlock(&thpool->mutex_nbworking);
     }
+    
+    pthread_exit(NULL); 
+
     return (void*) err_ok;
-}//not tested
-
-
+}//tested ; messy ; seems ok 
 
 static err_code thtab_init(S_THTAB * thtab){
     def_err_handler(!thtab, "thtab_init", err_null)
@@ -48,16 +62,15 @@ static err_code thtab_init(S_THTAB * thtab){
     thtab->size = DEF_THREAD_COUNT;
 
     return err_ok;
-}//not tested
+}//tested ; ok 
 
 static void thtab_free(S_THTAB * thtab){
    if(thtab)
     if (thtab->threads)
     free(thtab->threads);
-}//not tested
+}//tested ; ok
 
-
-err_code thpool_create(S_THPOOL * pool ){
+err_code thpool_init(S_THPOOL * pool ){
     def_err_handler(!pool, "thpool_create", err_null)
     //initialize the threads
     err_code failure = thtab_init(&pool->thtab);
@@ -66,21 +79,28 @@ err_code thpool_create(S_THPOOL * pool ){
     failure = task_queue_init(&pool->task_queue);
     def_err_handler(failure, "thpool_create", failure);
     
-    //initialize the mutex and the condition
+    //initialize the mutex and the condition of the queue 
     failure = pthread_mutex_init(&pool->mutex_queue, NULL) ;
     def_err_handler(failure, "thpool_create", err_null);
     failure = pthread_cond_init(&pool->cond_queue, NULL);
     def_err_handler(failure, "thpool_create", err_null);
+
+    //initialize the mutex / conition of the nb threads working 
+    failure = pthread_mutex_init(&pool->mutex_nbworking, NULL);
+    def_err_handler(failure, "thpool_init", failure);
+    failure = pthread_cond_init(&pool->cond_nbworking, NULL);
+    def_err_handler(failure, "thpool_create", err_null);
+
+    pool->nb_th_working = 0 ; 
+    pool->flags = 1<<0 ; 
 
     for(uint32_t i = 0 ; i < pool->thtab.size ; i++){
         failure = pthread_create(&pool->thtab.threads[i], NULL, thread_pool_thread, pool);
         def_err_handler(failure, "thpool_create", failure);
     }
 
-    pool->flags = 1<<0 ; 
-
     return err_ok;
-}//not tested
+}//tested ; ok 
 
 err_code thpool_append_task(S_THPOOL * pool , S_TASK * task){
     def_err_handler(! (pool && task), "thpool_append_task", err_null)
@@ -104,26 +124,48 @@ err_code thpool_append_task(S_THPOOL * pool , S_TASK * task){
     pthread_cond_signal(&pool->cond_queue);
 
     return err_ok ;
-}//not tested
+}//tested ; ok
 
+
+static err_code thpool_wait_for_all(S_THPOOL * pool){
+
+    pthread_mutex_lock(&pool->mutex_nbworking);
+    while(pool->nb_th_working)
+        pthread_cond_wait(&pool->cond_nbworking, &pool->mutex_nbworking);
+    pthread_mutex_unlock(&pool->mutex_nbworking);
+
+    return err_ok; 
+}//tested ; ok
 
 void thpool_destroy(S_THPOOL * pool, uint16_t mask ){
 
+    //is it really critical ? idk
+    //pthread_mutex_lock(&pool->mutex_nbworking);
     pool->flags |= mask;
+    //pthread_mutex_unlock(&pool->mutex_nbworking);
 
     if(mask & pool_shutting_down_force){
-        exit(1);
-    }
-
-    pthread_cond_broadcast(&pool->cond_queue);
-    for(uint32_t i = 0 ; i < pool->thtab.size ; i++){
-        pthread_join(pool->thtab.threads[i], NULL);
+        pthread_cond_broadcast(&pool->cond_queue);
+        for(uint32_t i = 0 ; i < pool->thtab.size ; i++){
+            pthread_join(pool->thtab.threads[i], NULL);
+        }
+    }else if( mask & pool_shutting_down_nice){
+        thpool_wait_for_all(pool); 
+        pthread_cond_broadcast(&pool->cond_queue);
+        for(uint32_t i = 0 ; i < pool->thtab.size ; i++){
+            pthread_join(pool->thtab.threads[i], NULL);
+        }
     }
 
     pthread_mutex_destroy(&pool->mutex_queue);
     pthread_cond_destroy(&pool->cond_queue);
+    pthread_mutex_destroy(&pool->mutex_nbworking);
+    pthread_cond_destroy(&pool->cond_nbworking);
     thtab_free(&pool->thtab);
     task_queue_destroy(&pool->task_queue);
-}//not tested
+}//tested ; ok 
+//there should be another way to shutdown 
+//the pool where you wait for all pending jobs 
+//to be completed 
 
 

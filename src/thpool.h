@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "job_deque.h"
+#include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <stdint.h>
 
@@ -20,7 +21,11 @@ typedef struct s_th_pool{
     pthread_mutex_t mutex_queue;
     pthread_cond_t cond_queue;
 
-    uint16_t flags ; 
+    pthread_mutex_t mutex_nbworking ; 
+    pthread_cond_t cond_nbworking ; 
+
+    volatile uint32_t nb_th_working ; 
+    volatile uint16_t flags ; 
     /*
     1<<0 -> pool is initialized
     1<<1 -> pool is shutting down nicely (stops accepting tasks)
@@ -29,7 +34,7 @@ typedef struct s_th_pool{
 }S_THPOOL ; 
 
 
-extern err_code thpool_create(S_THPOOL * pool );
+extern err_code thpool_init(S_THPOOL * pool );
 /*
     pool -> not null & not initialized ; 
     initializes the thread pool with a default queue size
