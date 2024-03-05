@@ -7,12 +7,12 @@
 #include <pthread.h>
 #include <stdint.h>
 
-
 typedef struct thread_tab{
     uint32_t size ;
     pthread_t * threads ;
 }S_THTAB;
 
+extern uint32_t global_submit;
 typedef struct s_th_pool{
 
     S_TASKQUEUE task_queue ;
@@ -21,16 +21,19 @@ typedef struct s_th_pool{
     pthread_mutex_t mutex_queue;
     pthread_cond_t cond_queue;
 
-    pthread_mutex_t mutex_nbworking ; 
-    pthread_cond_t cond_nbworking ; 
+    volatile _Atomic uint32_t nb_submitted ; 
+    volatile _Atomic uint32_t nb_completed ;
+    pthread_mutex_t mutex_sub_equals_comp ; 
+    pthread_cond_t cond_sub_equals_comp ;
 
-    volatile uint32_t nb_th_working ; 
-    volatile uint16_t flags ; 
+    volatile  uint32_t nb_th_working ; 
+    volatile  uint16_t flags ; 
     /*
-    1<<0 -> pool is initialized
-    1<<1 -> pool is shutting down nicely (stops accepting tasks)
-    1<<2 -> pool is shutting down brutally (dies)
+    1<<0 -> initialized
+    1<<1 -> accepts new tasks
+    1<<2 -> shutdown
     */
+  
 }S_THPOOL ; 
 
 
@@ -42,6 +45,12 @@ extern err_code thpool_init(S_THPOOL * pool );
     starts the thread
 */
 
+extern err_code thpool_start(S_THPOOL * pool ) ;
+/*
+    pool -> not null & initialized ;
+    starts every thread in the pool 
+*/
+
 extern err_code thpool_append_task(S_THPOOL * pool , S_TASK * task);
 /*
     pool -> not null & initialized ; 
@@ -49,12 +58,41 @@ extern err_code thpool_append_task(S_THPOOL * pool , S_TASK * task);
     appends the task to the thpool queue
 */
 
-extern void thpool_destroy(S_THPOOL * pool, uint16_t mask );
+
+extern err_code thpool_append_task_batch(S_THPOOL * pool , S_TASK * tasks, uint32_t nb_tasks);
+/*
+    pool -> not null & initialized ; 
+    tasks -> not null ; 
+    appends the tasks to the thpool queue
+
+*/
+
+extern err_code thpool_wait_for_all(S_THPOOL * pool);
+/*
+    pool -> not null & initialized ;
+    waits for all the threads to finish their tasks
+*/
+
+//should implement a restart function as well
+extern err_code thpool_restart(S_THPOOL * pool); 
+/*
+    restarts
+*/
+
+extern err_code thpool_destroy(S_THPOOL * pool );
 /*
     pool -> not null ; 
     shutdowns the pool's thread,
-    destroys the thread pool and frees it's memory
-    Also frees the queue 
+    destroys the thread pool, frees it's memory
+    and frees the queue 
+
+    mask can be : 
+    
+    1<<1 -> shutdown nice -> wait for all running threads to finish and stop
+    1<<2 -> shutdown force -> force stops threads 
+    1<<3 -> shutdown clean -> waits for the queue to be empty and destroys the pool
+    (shutdown clean not implemented atm&)
+
 */
 
 

@@ -14,10 +14,10 @@ typedef struct s_task{
 */
 
 typedef struct s_queue{
-    uint32_t max ; 
-    uint32_t size ; 
+    volatile _Atomic int64_t max ; 
+    volatile _Atomic int64_t size ; 
 
-    uint32_t start ; 
+    volatile _Atomic int64_t start ; 
 
     S_TASK * tasks ; 
 }S_TASKQUEUE ; 
@@ -36,8 +36,8 @@ extern err_code task_queue_init(S_TASKQUEUE * queue);
     default queue 
 */
 
-extern err_code task_queue_push_back(S_TASKQUEUE * queue , S_TASK * task);
-#define task_queue_push task_queue_push_back
+extern err_code add_front_deque(S_TASKQUEUE * dq, S_TASK * elem);
+#define task_queue_push add_front_deque
 /*
     queue -> not null & initialized ; 
     task -> not null ; 
@@ -45,8 +45,8 @@ extern err_code task_queue_push_back(S_TASKQUEUE * queue , S_TASK * task);
     if the queue is full, reallocates it. 
 */
 
-extern err_code task_queue_pop_front(S_TASKQUEUE * queue , S_TASK * task); 
-#define task_queue_pop task_queue_pop_front
+extern err_code pop_back_deque(S_TASKQUEUE * dq, S_TASK * elem); 
+#define task_queue_pop  pop_back_deque
 /*
     queue -> not null & initialized ; 
     task -> not null ; 

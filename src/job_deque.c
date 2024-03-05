@@ -1,9 +1,13 @@
 #include "job_deque.h"
 #include "common.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 
-#define DEF_QUEUE_SIZE 32
+#define DEF_QUEUE_SIZE 1
 #define get_back_queue(queue) ((queue->start + queue->size ) % queue->max)
-#define QUEUE_REALLOC_COEFF 1.5 
+#define QUEUE_REALLOC_COEFF 2
 
 err_code task_queue_init(S_TASKQUEUE * queue){
     def_err_handler(!queue, "thqueue_create", err_null)
@@ -16,51 +20,75 @@ err_code task_queue_init(S_TASKQUEUE * queue){
     queue->start = 0;
 
     return err_ok ; 
-}//not tested
+}//tested works
 
 static err_code task_queue_realloc(S_TASKQUEUE * queue){
     def_err_handler(!queue, "thqueue_realloc", err_null)
 
-    S_TASK * new_tasks = (S_TASK *)realloc(queue->tasks, queue->max * QUEUE_REALLOC_COEFF * sizeof(S_TASK));
-    def_err_handler(!new_tasks, "thqueue_realloc", err_alloc);
+  
 
-    queue->tasks = new_tasks;
+    queue->tasks = realloc(queue->tasks , queue->max * QUEUE_REALLOC_COEFF * sizeof(S_TASK));
+    def_err_handler(!queue->tasks, "thqueue_realloc", err_alloc);
+
+
+    if( queue->start + queue->size  > queue->max){
+        uint32_t shift = queue->start + queue->size - queue->max;
+        uint32_t new_start = queue->max * QUEUE_REALLOC_COEFF - shift;
+       // printf("shift %d, start %d  newstart %d, size %d max %d, newmax %d\n", shift, queue->start, new_start, queue->size, queue->max,queue->max * QUEUE_REALLOC_COEFF);
+        memmove( &queue->tasks[new_start], &queue->tasks[queue->start], shift * sizeof(S_TASK));
+        queue->start += new_start;
+    }
+   
     queue->max *= QUEUE_REALLOC_COEFF;
 
     return err_ok;
-}//not tested
+}//tested ; WRONG 
+//THIS FUNCTION DOES NOT WORK IM SO FUCKING DUMB
 
-err_code task_queue_push_back(S_TASKQUEUE * queue , S_TASK * task){
-    def_err_handler(!queue, "thqueue_push", err_null)
-    def_err_handler(!task, "thqueue_push", err_null)
 
-    if(queue->size == queue->max){
-        err_code failure = task_queue_realloc(queue);
-        def_err_handler(failure, "thqueue_push", failure);
+err_code add_front_deque(S_TASKQUEUE * dq, S_TASK * elem){
+    /*
+    dq -> not null & initialized
+    adds elem to the front of the deque, see wiki of deque for more info
+    */
+    def_err_handler(!dq,"thqueue_deque dq", err_null);
+
+    if(dq->max == dq->size){
+        err_code failure = task_queue_realloc(dq);
+        def_err_handler(failure, "add_front_deque", failure);
     }
 
-    queue->tasks[get_back_queue(queue)] = *task;
-    queue->size++;
-   
-    return err_ok;
-}//not tested
+    dq->start--; 
+    if(dq->start < 0 ) dq->start += dq->max  ;
 
-err_code task_queue_pop_front(S_TASKQUEUE * queue , S_TASK * task){
-    def_err_handler(!queue, "thqueue_pop", err_null)
-    def_err_handler(!task, "thqueue_pop", err_null)
-
-    if(queue->size == 0){
-        task = NULL ; 
-        def_war_handler(err_null, "thqueue_pop", err_null);
-        return err_ok ;
-    }
-
-    *task = queue->tasks[queue->start];
-    queue->size--;
-    queue->start = (queue->start + 1) % queue->max;
+    dq->tasks[dq->start] = *elem; 
+    dq->size++;
 
     return err_ok;
-}//not tested
+}//ok
+
+void dump_deque(S_TASKQUEUE * dq);
+
+err_code pop_back_deque(S_TASKQUEUE * dq, S_TASK * elem){
+    /*
+    */
+    def_err_handler(!dq,"pop_back_deque", err_null);
+    def_err_handler(!dq,"pop_back_deque", err_null);
+    warning_handler(dq->size == 0, "pop_back_deque",err_val, elem = NULL ; return err_ok;);
+
+    int64_t back_idx =  (dq->start + dq->size - 1 ) % dq->max;
+    //printf("start %ld, size %ld, backidx %ld, dq.max %ld\n", dq->start, dq->size, back_idx, dq->max) ;
+   if(! (dq->tasks[back_idx].function)){
+       //printf("start %ld, size %ld, backidx %ld, dq.max %ld\n", dq->start, dq->size, back_idx, dq->max) ;
+        //dump_deque(dq);
+   }
+    
+    *elem = dq->tasks[back_idx];
+
+    dq->size--;
+
+    return err_ok;
+}
 
 void task_queue_destroy(S_TASKQUEUE * queue){
     if(queue){
@@ -68,8 +96,15 @@ void task_queue_destroy(S_TASKQUEUE * queue){
             free(queue->tasks);
         }
     }
-}//not tested
+}//tested ; works
 
 bool task_queue_empty(S_TASKQUEUE * queue){
     return queue->size == 0 ;
-}//not tested
+}//tested ; inneficent ; should be a macro or smg
+
+
+void dump_deque(S_TASKQUEUE * queue){
+    for(uint32_t i = 0 ; i < queue->max ; i++){
+        printf("i=%ld , q.task[i].fn=%p, q.task[i].args=%p\n",i, queue->tasks[i].function, queue->tasks[i].args);
+    }
+}

@@ -2,4 +2,4 @@
 #test programs 
 
 all : src/*.c 
-	gcc -g -Og -o test $^
+	gcc -Og -g -std=gnu17 -o test $^

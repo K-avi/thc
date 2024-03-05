@@ -13,6 +13,7 @@
 typedef enum err_code{
     err_ok = 0 , err_null , 
     err_alloc , err_val , 
+    err_thstart
 }err_code;
 
 extern void er_report( FILE * flux, const char * repport_msg, const char * error_msg , err_code flag);

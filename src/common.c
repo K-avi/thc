@@ -7,7 +7,8 @@ static inline char * str_flag(err_code flag)
     {    
         case err_null: return "null pointer passed";
         case err_alloc: return "couldn't allocate memory";
-        case err_val: return "couldn't reallocate memory";     
+        case err_val: return "couldn't reallocate memory";
+        case err_thstart: return "couldn't start thread";     
         default : return "unknown error";
     }
 }//ok
