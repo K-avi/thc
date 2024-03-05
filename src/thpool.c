@@ -13,8 +13,6 @@ uint32_t global_nb_threads = DEF_THREAD_COUNT;
 #define f_accepting 2
 #define f_shutdown 4
 
-
-
 /* STATIC THTAB MANIPULATION */
 static err_code init_thtab(S_THTAB * thtab){
     def_err_handler(!thtab, "thtab_init", err_null)

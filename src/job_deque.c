@@ -5,8 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#define DEF_QUEUE_SIZE 1
-#define get_back_queue(queue) ((queue->start + queue->size ) % queue->max)
+#define DEF_QUEUE_SIZE 64
 #define QUEUE_REALLOC_COEFF 2
 
 err_code task_queue_init(S_TASKQUEUE * queue){
