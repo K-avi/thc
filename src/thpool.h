@@ -21,12 +21,14 @@ typedef struct s_th_pool{
     pthread_mutex_t mutex_queue;
     pthread_cond_t cond_queue;
 
+    //atomic + mutex is unnecessary I think
+    //and the program breaks if I remove the atomic
     volatile _Atomic uint32_t nb_submitted ; 
     volatile _Atomic uint32_t nb_completed ;
     pthread_mutex_t mutex_sub_equals_comp ; 
     pthread_cond_t cond_sub_equals_comp ;
 
-    volatile  uint32_t nb_th_working ; 
+    volatile  uint32_t nb_th_working ; //unused atm
     volatile  uint16_t flags ; 
     /*
     1<<0 -> initialized
@@ -73,10 +75,16 @@ extern err_code thpool_wait_for_all(S_THPOOL * pool);
     waits for all the threads to finish their tasks
 */
 
-//should implement a restart function as well
 extern err_code thpool_restart(S_THPOOL * pool); 
 /*
-    restarts
+    pool -> not null & initialized ;
+    restarts the pool 
+    ie : starts to accept new tasks again
+
+    kinda hacky atm, bc it waits 
+    for the tasks to finish before restarting
+    it prolly should wait for the threads 
+    to be idle or smtg
 */
 
 extern err_code thpool_destroy(S_THPOOL * pool );

@@ -45,7 +45,18 @@ same as error_hanler but doesn't return anything
     the default macro functions are safer / easier to use. I recommand sticking to them. 
     they don't execute any code and just report the error / warning if cond is true.
 */
-#define def_err_handler(cond,msg,flag) error_handler(cond,msg,flag,;)
+//#define debug
+
+#ifdef debug 
+
+#define def_err_handler(cond,msg,flag)  error_handler(cond,msg,flag,;) 
 #define def_war_handler(cond,msg,flag) warning_handler(cond,msg,flag,;)
+#else 
+
+#define def_err_handler(cond,msg,flag)  ;
+#define def_war_handler(cond,msg,flag) ;
+#endif
+
+
 
 #endif 

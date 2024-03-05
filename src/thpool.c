@@ -2,10 +2,6 @@
 #include "common.h"
 #include "job_deque.h"
 
-#include <bits/pthreadtypes.h>
-#include <pthread.h>
-#include <stdint.h>
-
 #define DEF_THREAD_COUNT 4
 uint32_t global_nb_threads = DEF_THREAD_COUNT;
 
@@ -21,9 +17,8 @@ static err_code init_thtab(S_THTAB * thtab){
     def_err_handler(!thtab->threads, "thtab_init", err_alloc)
 
     thtab->size =global_nb_threads;
-
     return err_ok;
-}
+}//yeah
 
 static void free_thtab(S_THTAB * thtab){
     if(thtab){
@@ -33,7 +28,7 @@ static void free_thtab(S_THTAB * thtab){
         thtab->threads = NULL ; 
         thtab->size = 0 ; 
     }
-}
+}//yeah
 
 /* THPOOL PRIMITIVES */
 err_code thpool_init(S_THPOOL * pool ){
@@ -139,14 +134,11 @@ err_code thpool_restart(S_THPOOL * pool){
 err_code thpool_destroy(S_THPOOL *pool){
     def_err_handler(!pool, "thpool_destroy", err_null);
 
-    thpool_wait_for_all(pool);
-    
+    thpool_wait_for_all(pool);  
     pool->flags |= f_shutdown;
 
-    
     pthread_cond_broadcast(&pool->cond_queue);
     for(uint32_t i = 0 ; i < pool->thtab.size ; i++){
-       // printf("join i = %d\n", i);
         pthread_join(pool->thtab.threads[i], NULL);
     }
 
@@ -157,6 +149,8 @@ err_code thpool_destroy(S_THPOOL *pool){
 
     return err_ok;
 }
+
+/* THE ACTUAL WORKER FUNCTION */
 
 static void * thpool_worker(void * arg){
     S_THPOOL * pool = (S_THPOOL *) arg;
@@ -179,9 +173,9 @@ static void * thpool_worker(void * arg){
         pthread_mutex_unlock(&pool->mutex_queue);
       
         if(!task.function){
-            //fprintf(stderr,"smjzq\n");
-            //exit(-1);
-            
+            //unrecoverable error
+            def_err_handler(err_val, "thpool_worker", err_val);
+            pthread_exit(NULL);      
         }else{ 
             task.function(task.args);
             pool->nb_completed++;
@@ -189,8 +183,7 @@ static void * thpool_worker(void * arg){
       
         if(pool->nb_completed <= pool->nb_submitted){
             pthread_cond_signal(&pool->cond_sub_equals_comp);
-        }
-            
+        }          
         pool->nb_th_working--;
     }
     return NULL;      
