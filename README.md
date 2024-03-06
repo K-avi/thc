@@ -12,5 +12,5 @@ is to run on modern Linux installs.
 
 My main reference for the implementation was :
 
-    - Mathias Brossard's threadpool repo https://github.com/mbrossard/threadpool/tree/master
+    - Mathias Brossard's threadpool repo https://github.com/mbrossard/threadpool
 
